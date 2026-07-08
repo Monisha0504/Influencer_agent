@@ -1,0 +1,24 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+
+# Build / packaging
+*.zip
+*.egg-info/
+dist/
+build/
+
+# Generated output
+outputs/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

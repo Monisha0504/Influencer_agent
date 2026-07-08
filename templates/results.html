@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discovery Results — Influencer Discovery Agent</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1>Discovery Results</h1>
+      <p class="subtitle">
+        Category: <strong>{{ inputs.category }}</strong> &nbsp;•&nbsp;
+        Followers: <strong>{{ inputs.followers_range }}</strong>
+        {% if inputs.location %}
+          &nbsp;•&nbsp; 📍 <strong>{{ inputs.location }}</strong>
+        {% endif %}
+        {% if inputs.platforms %}
+          &nbsp;•&nbsp; Platforms: <strong>{{ inputs.platforms | join(", ") }}</strong>
+        {% endif %}
+        {% if inputs.website %}
+          &nbsp;•&nbsp; Website:
+          <a href="{{ inputs.website }}" target="_blank" rel="noopener">{{ inputs.website }}</a>
+        {% endif %}
+        {% if inputs.creator_preference %}
+          &nbsp;•&nbsp; Preference: <strong>{{ inputs.creator_preference_label }}</strong>
+        {% endif %}
+      </p>
+      <div class="action-row">
+        <a href="/" class="back-link">← Run another search</a>
+        {% if download_token %}
+          <a href="/download/{{ download_token }}.xlsx" class="download-btn">
+            ⬇ Download Excel
+          </a>
+        {% endif %}
+      </div>
+    </header>
+
+    <main>
+      {% if error %}
+        <div class="card error">
+          <h2>Something went wrong</h2>
+          <pre>{{ error }}</pre>
+        </div>
+      {% else %}
+        <section class="summary card">
+          <div class="summary-grid">
+            <div>
+              <span class="label">Industry</span>
+              <p>{{ result.industry or "—" }}</p>
+            </div>
+            <div>
+              <span class="label">Target Audience</span>
+              <p>{{ result.target_audience or "—" }}</p>
+            </div>
+            <div class="full">
+              <span class="label">Recommended Platforms</span>
+              <p>
+                {% if result.recommended_platforms %}
+                  {% for p in result.recommended_platforms %}
+                    <span class="chip">{{ p }}</span>
+                  {% endfor %}
+                {% else %}
+                  —
+                {% endif %}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <h2 class="section-title">Top {{ result.influencers|length }} Influencer Picks</h2>
+
+        <div class="grid">
+          {% for inf in result.influencers %}
+            {% set score = inf.fit_score|int if inf.fit_score else 0 %}
+            <article class="card influencer">
+              <header class="inf-head">
+                <div>
+                  <h3>{{ inf.name or "Unnamed creator" }}</h3>
+                  <p class="muted">
+                    {{ inf.platform }}{% if inf.niche %} • {{ inf.niche }}{% endif %}
+                    {% if inf.location %} • {{ inf.location }}{% endif %}
+                  </p>
+                </div>
+                <div class="score" data-score="{{ score }}">
+                  <span class="score-num">{{ score }}</span>
+                  <span class="score-label">fit</span>
+                </div>
+              </header>
+
+              <div class="stats">
+                <div>
+                  <span class="label">Followers</span>
+                  <p>{{ inf.followers or "—" }}</p>
+                </div>
+                <div>
+                  <span class="label">Engagement</span>
+                  <p>{{ inf.engagement_rate or "—" }}</p>
+                </div>
+              </div>
+
+              {% if inf.preference_match %}
+                <p class="body preference-match-tag">✅ <strong>Preference match:</strong> {{ inf.preference_match }}</p>
+              {% endif %}
+              {% if inf.fit_reason %}
+                <p class="body"><strong>Why they fit:</strong> {{ inf.fit_reason }}</p>
+              {% endif %}
+              {% if inf.competitor_collaboration %}
+                <p class="body"><strong>Competitor activity:</strong> {{ inf.competitor_collaboration }}</p>
+              {% endif %}
+              {% if inf.content_strategy %}
+                <p class="body"><strong>Content idea:</strong> {{ inf.content_strategy }}</p>
+              {% endif %}
+
+              {% if inf.profile_link %}
+                <a class="profile-btn" href="{{ inf.profile_link }}" target="_blank" rel="noopener">
+                  View profile ↗
+                </a>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </main>
+  </div>
+
+  <script>
+    // Color the fit-score badges by value
+    document.querySelectorAll('.score').forEach((el) => {
+      const s = parseInt(el.dataset.score || '0', 10);
+      if (s >= 80) el.classList.add('high');
+      else if (s >= 60) el.classList.add('mid');
+      else el.classList.add('low');
+    });
+  </script>
+</body>
+</html>

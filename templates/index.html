@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Influencer Discovery Agent</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1>Influencer Discovery Agent</h1>
+      <p class="subtitle">
+        Find the right creators for your brand. Choose your category, location,
+        platforms, and follower range — we'll handle the rest.
+      </p>
+    </header>
+
+    <main>
+      <form class="card" action="/discover" method="post" id="discover-form">
+
+        <!-- 1. Industry / Category -->
+        <section class="field">
+          <label for="category">Industry / Creator Category <span class="req">*</span></label>
+          <select id="category" name="category" required>
+            {% for c in categories %}
+              <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+          </select>
+          <input
+            type="text"
+            name="category_custom"
+            class="custom-input"
+            placeholder="Or type your own category (overrides the dropdown)"
+          />
+        </section>
+
+        <!-- 2. Location -->
+        <section class="field">
+          <label for="location">Location <span class="muted-label">(optional)</span></label>
+          <div class="location-wrap">
+            <span class="location-icon">📍</span>
+            <input
+              type="text"
+              id="location"
+              name="location"
+              class="location-input"
+              placeholder="e.g. Mumbai, India  or  New York, USA"
+              autocomplete="off"
+            />
+          </div>
+          <p class="hint">Filters results to influencers based in this location. Uses Google Places for suggestions.</p>
+        </section>
+
+        <!-- 3. Platform -->
+        <section class="field">
+          <label>Platform <span class="muted-label">(leave blank for all)</span></label>
+          <div class="platform-grid">
+            {% for p in platforms %}
+            <label class="platform-chip">
+              <input type="checkbox" name="platforms" value="{{ p }}" />
+              <span class="platform-label">
+                <span class="plat-icon">{{ {"Instagram": "📸", "YouTube": "▶️", "Facebook": "📘", "LinkedIn": "💼", "X": "𝕏", "TikTok": "🎵"}[p] }}</span>
+                {{ p }}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+          <p class="hint">Select one or more platforms to restrict results. All platforms are included by default.</p>
+        </section>
+
+        <!-- 4. Followers range -->
+        <section class="field">
+          <label>Follower Range <span class="req">*</span></label>
+
+          <div class="tabs">
+            <label class="tab">
+              <input type="radio" name="followers_mode" value="preset" checked />
+              <span>Preset range</span>
+            </label>
+            <label class="tab">
+              <input type="radio" name="followers_mode" value="manual" />
+              <span>Custom range</span>
+            </label>
+          </div>
+
+          <div class="tab-panel" data-panel="preset">
+            <select name="followers_range">
+              {% for r in follower_ranges %}
+                <option value="{{ r }}" {% if loop.index == 2 %}selected{% endif %}>{{ r }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="tab-panel hidden" data-panel="manual">
+            <div class="row">
+              <input type="text" name="followers_min" placeholder="Min (e.g. 25000)" />
+              <span class="dash">—</span>
+              <input type="text" name="followers_max" placeholder="Max (e.g. 200000)" />
+            </div>
+            <p class="hint">Numbers only. Leave blank for open-ended.</p>
+          </div>
+        </section>
+
+        <!-- 5. Creator Preference (optional) -->
+        <section class="field">
+          <label for="creator_preference">Creator Preference <span class="muted-label">(optional)</span></label>
+          <textarea
+            id="creator_preference"
+            name="creator_preference"
+            class="preference-input"
+            rows="3"
+            placeholder="Describe what you're looking for, e.g. &quot;creators in their 40s-50s who are themselves living with diabetes&quot; or &quot;young creators who feature a diabetic parent or grandparent in their videos&quot;"
+          ></textarea>
+          <p class="hint">Leave blank for no preference. The agent will prioritise creators matching whatever you describe here.</p>
+        </section>
+
+        <!-- 6. Website (optional) -->
+        <section class="field">
+          <label for="website">Website <span class="muted-label">(optional)</span></label>
+          <input
+            type="url"
+            id="website"
+            name="website"
+            placeholder="https://yourbrand.com"
+          />
+          <p class="hint">If provided, we'll scrape the homepage to understand your brand.</p>
+        </section>
+
+        <button type="submit" class="cta">Discover Influencers</button>
+      </form>
+
+      <p class="footnote">
+        Powered by LangChain + OpenRouter. Supports location-based and platform-specific filtering.
+      </p>
+    </main>
+  </div>
+
+  <script>
+    // ── Preset / manual follower toggle ────────────────────────────────
+    const radios = document.querySelectorAll('input[name="followers_mode"]');
+    const panels = document.querySelectorAll('.tab-panel');
+    radios.forEach((r) =>
+      r.addEventListener('change', () => {
+        panels.forEach((p) => {
+          p.classList.toggle('hidden', p.dataset.panel !== r.value);
+        });
+      })
+    );
+
+    // ── Loading state on submit ─────────────────────────────────────────
+    const form = document.getElementById('discover-form');
+    const btn = document.querySelector('.cta');
+    form.addEventListener('submit', () => {
+      btn.disabled = true;
+      btn.textContent = 'Finding creators…';
+    });
+  </script>
+</body>
+</html>
