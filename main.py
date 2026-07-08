@@ -6,8 +6,9 @@ Run locally:
 Then open http://127.0.0.1:8000
 """
 
+import base64
 import io
-import uuid
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -70,19 +71,20 @@ FOLLOWER_RANGES = [
 ]
 
 
-# ---------- In-memory result cache (keyed by short token) ----------
-# Lives until the server restarts. Good enough for a single-user local app.
-_RESULTS_CACHE: dict[str, dict] = {}
+# ---------- Stateless download payload ----------
+# The Excel file is regenerated on demand from a payload round-tripped through
+# the results page, instead of a server-side cache keyed by token. Serverless
+# deployments (e.g. Vercel) run each request on a possibly-different, ephemeral
+# instance, so anything kept in a process-local dict can vanish before the
+# "Download" click arrives.
+def _encode_download_payload(result: dict, inputs: dict) -> str:
+    raw = json.dumps({"result": result, "inputs": inputs}).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii")
 
 
-def _store_result(result: dict, inputs: dict) -> str:
-    token = uuid.uuid4().hex[:12]
-    _RESULTS_CACHE[token] = {"result": result, "inputs": inputs}
-    # Keep cache small - drop oldest if > 50 entries
-    if len(_RESULTS_CACHE) > 50:
-        for old in list(_RESULTS_CACHE.keys())[:-50]:
-            _RESULTS_CACHE.pop(old, None)
-    return token
+def _decode_download_payload(blob: str) -> dict:
+    raw = base64.urlsafe_b64decode(blob.encode("ascii"))
+    return json.loads(raw)
 
 
 # ---------- Routes ----------
@@ -138,7 +140,7 @@ async def discover(
     preference_label = final_preference or "No preference"
     preference_directive = _build_preference_directive(final_preference) if final_preference else None
 
-    token = None
+    download_payload = None
     try:
         result = run_discovery(
             category=final_category,
@@ -159,7 +161,7 @@ async def discover(
             "creator_preference": final_preference or "",
             "creator_preference_label": preference_label,
         }
-        token = _store_result(result, inputs)
+        download_payload = _encode_download_payload(result, inputs)
     except Exception as e:
         result = None
         error = str(e)
@@ -181,19 +183,23 @@ async def discover(
             "result": result,
             "error": error,
             "inputs": inputs,
-            "download_token": token,
+            "download_payload": download_payload,
         },
     )
 
 
-@app.get("/download/{token}.xlsx")
-async def download_xlsx(token: str):
-    entry = _RESULTS_CACHE.get(token)
-    if not entry:
-        raise HTTPException(status_code=404, detail="Result not found or expired. Please run the search again.")
+@app.post("/download.xlsx")
+async def download_xlsx(payload: str = Form(...)):
+    try:
+        data = _decode_download_payload(payload)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or corrupted download data. Please run the search again.",
+        )
 
-    result = entry["result"]
-    inputs = entry["inputs"]
+    result = data.get("result") or {}
+    inputs = data.get("inputs") or {}
     xlsx_bytes = _build_xlsx(result, inputs)
 
     safe_cat = "".join(c for c in inputs["category"] if c.isalnum() or c in ("_", "-")) or "category"

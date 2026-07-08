@@ -29,10 +29,11 @@
       </p>
       <div class="action-row">
         <a href="/" class="back-link">← Run another search</a>
-        {% if download_token %}
-          <a href="/download/{{ download_token }}.xlsx" class="download-btn">
-            ⬇ Download Excel
-          </a>
+        {% if download_payload %}
+          <form action="/download.xlsx" method="post" class="download-form">
+            <input type="hidden" name="payload" value="{{ download_payload }}" />
+            <button type="submit" class="download-btn">⬇ Download Excel</button>
+          </form>
         {% endif %}
       </div>
     </header>
